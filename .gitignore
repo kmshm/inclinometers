@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pliki wyjściowe (opcjonalnie - zakomentuj jeśli chcesz commitować)
+# *_filtered.csv
+# testowe_filtered_*.csv
+
+# Duże pliki CSV (opcjonalnie)
+# *.csv
+
+# Logs
+*.log
