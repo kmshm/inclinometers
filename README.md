@@ -15,11 +15,14 @@ Ten skrypt został stworzony do pracy z dużymi plikami CSV zawierającymi dane 
 - **Automatyczne wykrywanie separatora** - Aktualnie ustawiony na średnik (`;`)
 - **Zachowanie struktury** - Pierwsza kolumna (daty) jest zawsze zachowywana
 - **Filtrowanie po fragmencie nazwy** - Możliwość wyboru kolumn zawierających określony fragment (np. `_dA`)
-- **Filtrowanie po inklinometrze** - Opcja wyboru konkretnego inklinometru (np. `Inkl_[1]`, `Ink_[6]`)
+- **Filtrowanie po inklinometrze** - Dwie opcje:
+  - Wybór konkretnego inklinometru (np. `Inkl_[1]`, `Ink_[6]`) → jeden plik
+  - Automatyczne generowanie osobnych plików dla WSZYSTKICH inklinometrów
 - **Filtrowanie po godzinie** - Dwie opcje:
   - Wszystkie dane (pełne wiersze)
   - Tylko wiersze z konkretną godziną (np. 18:00 każdego dnia)
 - **Kombinacja filtrów** - Możliwość łączenia: fragment + inklinometr + godzina
+- **Automatyczne wykrywanie inklinometrów** - Skrypt sam znajdzie wszystkie inklinometry w pliku
 - **Podgląd logów** - Okno z informacjami o przetwarzaniu
 - **Automatyczna nazwa wyjściowa** - Sugerowana nazwa pliku wyjściowego na podstawie wejściowego
 - **Testowe pliki w osobnym folderze** - Wszystkie pliki wynikowe zapisywane do `test_outputs/`
@@ -102,10 +105,23 @@ python3 test_filter.py
    - W polu "Fragment nazwy kolumny" wpisz fragment, który mają zawierać kolumny
    - Przykłady: `_dA`, `_T`, `_dB`, `_X`, `_Y`
 
-4. **Opcjonalnie: wybierz konkretny inklinometr:**
+4. **Opcjonalnie: wybierz tryb pracy z inklinometrami:**
+
+   **Opcja A - Pojedynczy inklinometr (jeden plik):**
    - Zaznacz checkbox "Tylko z konkretnego inklinometru"
    - Wpisz nazwę inklinometru, np. `Inkl_[1]`, `Inkl_[2]`, `Ink_[5]`, `Ink_[6]`
    - Zostają tylko kolumny z tego inklinometru
+   - Wynik: JEDEN plik z danymi wybranego inklinometru
+
+   **Opcja B - Wszystkie inklinometry (wiele plików):**
+   - Zaznacz checkbox "Generuj osobne pliki dla każdego inklinometru"
+   - Wpisz nazwę bazową (np. `dane_12_00`)
+   - Skrypt automatycznie wykryje wszystkie inklinometry
+   - Wynik: WIELE plików, po jednym dla każdego inklinometru
+     - `dane_12_00_Ink_5.csv`
+     - `dane_12_00_Inkl_1.csv`
+     - `dane_12_00_Inkl_2.csv`
+     - itd.
 
 5. **Wybierz opcję filtrowania wierszy:**
    - **Wszystkie dane** - zachowuje wszystkie wiersze z pliku
@@ -233,6 +249,46 @@ Date UTC;Inkl_[1][0]_dA;Inkl_[1][1]_dA;Inkl_[1][2]_dA;...
 - Z 1342 wierszy → 11 wierszy
 
 Idealny do analizy dziennych wartości jednego inklinometru o stałej porze!
+
+### Przykład 7: Generowanie osobnych plików dla wszystkich inklinometrów
+
+**Plik wejściowy:** `testowe.csv` (1342 wiersze, 459 kolumn, 8 inklinometrów)
+
+**Fragment:** `_dA`
+
+**Tryb:** Generuj osobne pliki
+
+**Nazwa bazowa:** `pomiary_dA`
+
+**Godzina:** `12:00`
+
+**Wynik:** 8 osobnych plików, po jednym dla każdego inklinometru
+
+```
+pomiary_dA_Ink_5.csv     (11 wierszy, 16 kolumn)
+pomiary_dA_Ink_6.csv     (11 wierszy, 15 kolumn)
+pomiary_dA_Ink_7.csv     (11 wierszy, 14 kolumn)
+pomiary_dA_Ink_8.csv     (11 wierszy, 9 kolumn)
+pomiary_dA_Inkl_1.csv    (11 wierszy, 16 kolumn)
+pomiary_dA_Inkl_2.csv    (11 wierszy, 16 kolumn)
+pomiary_dA_Inkl_3.csv    (11 wierszy, 10 kolumn)
+pomiary_dA_Inkl_4.csv    (11 wierszy, 16 kolumn)
+```
+
+**Przykładowa zawartość `pomiary_dA_Inkl_1.csv`:**
+```
+Date UTC;Inkl_[1][0]_dA;Inkl_[1][1]_dA;Inkl_[1][2]_dA;...
+26.09.2025 12:00;1.97;10.08;8.15;19.53;...
+27.09.2025 12:00;1.96;10.07;8.14;19.52;...
+...
+```
+
+**Zastosowania:**
+- Automatyczne rozdzielenie danych na osobne pliki dla każdego urządzenia
+- Łatwe porównanie wartości między inklinometrami (każdy w osobnym pliku)
+- Przekazanie danych do innych osób/narzędzi (każdy bierze swój inklinometr)
+- Redukcja rozmiaru plików - zamiast jednego dużego, wiele małych
+- Jeden krok zamiast 8 ręcznych operacji!
 
 ## Struktura danych
 
@@ -399,6 +455,26 @@ A: Skrypt nie znajdzie żadnych pasujących kolumn i wyświetli ostrzeżenie. Sp
 **Q: Gdzie zapisują się testowe pliki?**
 
 A: Wszystkie pliki wynikowe z testów zapisują się do folderu `test_outputs/`, który jest ignorowany przez git
+
+**Q: Jak działa opcja "Generuj osobne pliki dla każdego inklinometru"?**
+
+A: Skrypt automatycznie wykrywa wszystkie inklinometry w pliku (np. Ink_[5], Inkl_[1] itd.) i dla każdego tworzy osobny plik CSV. Do nazwy bazowej dodawana jest nazwa inklinometru, np. `dane_12_00_Inkl_1.csv`
+
+**Q: Ile plików zostanie utworzonych w trybie "generuj osobne pliki"?**
+
+A: Tyle, ile inklinometrów ma kolumny z wybranym fragmentem. Np. dla `_dA` może być 8 plików (wszystkie inklinometry), ale dla `_dB` może być tylko 7 (jeśli jeden inklinometr nie ma kolumn _dB)
+
+**Q: Gdzie zapisują się pliki w trybie "generuj osobne pliki"?**
+
+A: W tym samym folderze co plik wejściowy. Jeśli plik wejściowy jest w `/home/user/dane/testowe.csv`, to pliki wyjściowe będą w `/home/user/dane/`
+
+**Q: Czy mogę użyć obu opcji jednocześnie (pojedynczy inklinometr + generuj osobne pliki)?**
+
+A: Nie - to wzajemnie wykluczające się opcje. Gdy zaznaczysz "Generuj osobne pliki", opcja pojedynczego inklinometru zostanie wyłączona
+
+**Q: Jak nazywają się pliki wyjściowe w trybie "generuj osobne pliki"?**
+
+A: Nazwa bazowa + `_` + nazwa inklinometru (z zamienionymi nawiasami na podkreślniki) + `.csv`. Przykład: `dane_12_00_Inkl_1.csv` dla inklinometru `Inkl_[1]`
 
 ## Licencja
 

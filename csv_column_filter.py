@@ -15,7 +15,7 @@ class CSVColumnFilterApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Filtrowanie kolumn CSV")
-        self.root.geometry("700x650")
+        self.root.geometry("700x700")
 
         # Zmienne
         self.input_file = tk.StringVar()
@@ -29,6 +29,10 @@ class CSVColumnFilterApp:
         # Zmienne dla filtrowania po inklinometrze
         self.inclinometer_filter_enabled = tk.BooleanVar(value=False)
         self.inclinometer_name = tk.StringVar(value="Inkl_[1]")
+
+        # Zmienne dla generowania osobnych plików
+        self.split_by_inclinometer = tk.BooleanVar(value=False)
+        self.base_filename = tk.StringVar(value="")
 
         # Tworzenie interfejsu
         self.create_widgets()
@@ -101,13 +105,42 @@ class CSVColumnFilterApp:
         # Początkowy stan - wyłącz pole czasu
         self.time_entry.config(state='disabled')
 
+        # Ramka dla opcji generowania osobnych plików
+        split_frame = tk.Frame(self.root, padx=10, pady=5)
+        split_frame.pack(fill=tk.X)
+
+        split_label_frame = tk.Frame(split_frame)
+        split_label_frame.pack(anchor=tk.W, pady=2)
+
+        self.split_checkbox = tk.Checkbutton(
+            split_label_frame,
+            text="Generuj osobne pliki dla każdego inklinometru",
+            variable=self.split_by_inclinometer,
+            command=self.toggle_split_mode
+        )
+        self.split_checkbox.pack(side=tk.LEFT)
+
+        split_input_frame = tk.Frame(split_frame, padx=20)
+        split_input_frame.pack(anchor=tk.W, pady=2)
+
+        tk.Label(split_input_frame, text="Nazwa bazowa:").pack(side=tk.LEFT)
+        self.base_filename_entry = tk.Entry(split_input_frame, textvariable=self.base_filename, width=30)
+        self.base_filename_entry.pack(side=tk.LEFT, padx=5)
+        tk.Label(split_input_frame, text="(np. 'dane_12_00')").pack(side=tk.LEFT)
+
+        # Początkowy stan - wyłącz pole nazwy bazowej
+        self.base_filename_entry.config(state='disabled')
+
         # Ramka dla pliku wyjściowego
         output_frame = tk.Frame(self.root, padx=10, pady=5)
         output_frame.pack(fill=tk.X)
 
-        tk.Label(output_frame, text="Plik wyjściowy:").pack(side=tk.LEFT)
-        tk.Entry(output_frame, textvariable=self.output_file, width=50).pack(side=tk.LEFT, padx=5)
-        tk.Button(output_frame, text="Wybierz...", command=self.select_output_file).pack(side=tk.LEFT)
+        self.output_label = tk.Label(output_frame, text="Plik wyjściowy:")
+        self.output_label.pack(side=tk.LEFT)
+        self.output_entry = tk.Entry(output_frame, textvariable=self.output_file, width=50)
+        self.output_entry.pack(side=tk.LEFT, padx=5)
+        self.output_button = tk.Button(output_frame, text="Wybierz...", command=self.select_output_file)
+        self.output_button.pack(side=tk.LEFT)
 
         # Przycisk filtrowania
         button_frame = tk.Frame(self.root, padx=10, pady=10)
@@ -168,6 +201,42 @@ class CSVColumnFilterApp:
         else:
             self.inclinometer_entry.config(state='disabled')
 
+    def toggle_split_mode(self):
+        """Włącz/wyłącz tryb generowania osobnych plików"""
+        if self.split_by_inclinometer.get():
+            # Włącz pole nazwy bazowej
+            self.base_filename_entry.config(state='normal')
+            # Wyłącz pojedynczy inklinometr
+            self.inclinometer_filter_enabled.set(False)
+            self.inclinometer_checkbox.config(state='disabled')
+            self.inclinometer_entry.config(state='disabled')
+            # Wyłącz wybór pojedynczego pliku wyjściowego
+            self.output_label.config(text="Folder wyjściowy:")
+            self.output_entry.config(state='disabled')
+            self.output_button.config(state='disabled')
+        else:
+            # Wyłącz pole nazwy bazowej
+            self.base_filename_entry.config(state='disabled')
+            # Włącz pojedynczy inklinometr
+            self.inclinometer_checkbox.config(state='normal')
+            # Włącz wybór pojedynczego pliku wyjściowego
+            self.output_label.config(text="Plik wyjściowy:")
+            self.output_entry.config(state='normal')
+            self.output_button.config(state='normal')
+
+    def detect_inclinometers(self, columns):
+        """Wykryj wszystkie unikalne inklinometry w nagłówkach kolumn"""
+        inclinometers = set()
+        for col in columns[1:]:  # Pomiń pierwszą kolumnę (daty)
+            # Szukaj wzorców: Inkl_[x] lub Ink_[x]
+            if col.startswith('Inkl_[') or col.startswith('Ink_['):
+                # Pobierz część do drugiego nawiasu ']'
+                parts = col.split(']')
+                if len(parts) >= 2:
+                    inclinometer = parts[0] + ']'  # np. "Inkl_[1]" lub "Ink_[6]"
+                    inclinometers.add(inclinometer)
+        return sorted(list(inclinometers))
+
     def filter_columns(self):
         """Główna funkcja filtrująca kolumny"""
         # Walidacja
@@ -175,9 +244,17 @@ class CSVColumnFilterApp:
             messagebox.showerror("Błąd", "Proszę wybrać plik wejściowy!")
             return
 
-        if not self.output_file.get():
-            messagebox.showerror("Błąd", "Proszę wybrać plik wyjściowy!")
-            return
+        # Sprawdź czy tryb split jest włączony
+        split_mode = self.split_by_inclinometer.get()
+
+        if split_mode:
+            if not self.base_filename.get():
+                messagebox.showerror("Błąd", "Proszę podać nazwę bazową pliku!")
+                return
+        else:
+            if not self.output_file.get():
+                messagebox.showerror("Błąd", "Proszę wybrać plik wyjściowy!")
+                return
 
         if not self.filter_text.get():
             messagebox.showerror("Błąd", "Proszę podać fragment nazwy kolumny!")
@@ -210,6 +287,95 @@ class CSVColumnFilterApp:
             # Filtrowanie kolumn - pierwsza kolumna + kolumny zawierające fragment
             filter_fragment = self.filter_text.get()
 
+            # TRYB SPLIT: Generuj osobne pliki dla każdego inklinometru
+            if split_mode:
+                self.log("\n*** TRYB: Generowanie osobnych plików dla każdego inklinometru ***")
+
+                # Wykryj wszystkie inklinometry
+                inclinometers = self.detect_inclinometers(all_columns)
+                self.log(f"\nZnaleziono {len(inclinometers)} inklinometrów: {', '.join(inclinometers)}")
+
+                if not inclinometers:
+                    messagebox.showerror("Błąd", "Nie znaleziono żadnych inklinometrów w pliku!")
+                    self.log("\n⚠ BŁĄD: Brak inklinometrów w nagłówkach")
+                    return
+
+                # Pobierz folder i nazwę bazową
+                input_dir = os.path.dirname(self.input_file.get()) or '.'
+                base_name = self.base_filename.get().strip()
+
+                files_created = []
+
+                # Przetwórz każdy inklinometr
+                for inclinometer in inclinometers:
+                    self.log(f"\n--- Przetwarzanie: {inclinometer} ---")
+
+                    # Filtruj kolumny dla tego inklinometru
+                    selected_indices = [0]
+                    selected_columns = [all_columns[0]]
+
+                    for i, col in enumerate(all_columns[1:], start=1):
+                        if filter_fragment in col and col.startswith(inclinometer):
+                            selected_indices.append(i)
+                            selected_columns.append(col)
+
+                    if len(selected_columns) == 1:
+                        self.log(f"  ⚠ Brak kolumn zawierających '{filter_fragment}' dla {inclinometer}, pomijam")
+                        continue
+
+                    self.log(f"  Znaleziono {len(selected_columns) - 1} kolumn")
+
+                    # Filtrowanie po godzinie (jeśli wybrano)
+                    time_mode = self.time_filter_mode.get()
+                    if time_mode == "specific_time":
+                        target_time = self.specific_time.get().strip()
+                        self.log(f"  Filtrowanie po godzinie: {target_time}")
+
+                        filtered_rows = []
+                        for row in data_rows:
+                            if len(row) > 0:
+                                date_str = row[0].strip()
+                                if ' ' in date_str:
+                                    time_part = date_str.split(' ')[-1]
+                                    if time_part == target_time:
+                                        filtered_row = [row[i] if i < len(row) else '' for i in selected_indices]
+                                        filtered_rows.append(filtered_row)
+                    else:
+                        filtered_rows = []
+                        for row in data_rows:
+                            filtered_row = [row[i] if i < len(row) else '' for i in selected_indices]
+                            filtered_rows.append(filtered_row)
+
+                    self.log(f"  Wierszy: {len(filtered_rows)}")
+
+                    # Utwórz nazwę pliku
+                    # Zamień [ i ] na _ dla bezpiecznej nazwy pliku
+                    safe_incl_name = inclinometer.replace('[', '_').replace(']', '_').replace('__', '_').rstrip('_')
+                    output_filename = f"{base_name}_{safe_incl_name}.csv"
+                    output_path = os.path.join(input_dir, output_filename)
+
+                    # Zapisz plik
+                    with open(output_path, 'w', encoding='utf-8', newline='') as f:
+                        writer = csv.writer(f, delimiter=';')
+                        writer.writerow(selected_columns)
+                        writer.writerows(filtered_rows)
+
+                    files_created.append(output_filename)
+                    self.log(f"  ✓ Zapisano: {output_filename}")
+
+                self.log("\n" + "=" * 60)
+                self.log(f"✓ SUKCES! Utworzono {len(files_created)} plików:")
+                for fname in files_created:
+                    self.log(f"  - {fname}")
+                self.log("=" * 60)
+
+                messagebox.showinfo("Sukces",
+                    f"Utworzono {len(files_created)} plików!\n\n" +
+                    "\n".join([f"- {f}" for f in files_created[:5]]) +
+                    (f"\n... i {len(files_created) - 5} więcej" if len(files_created) > 5 else ""))
+                return
+
+            # TRYB NORMALNY: Pojedynczy plik
             # Sprawdź czy filtrujemy po inklinometrze
             inclinometer_filter = self.inclinometer_filter_enabled.get()
             if inclinometer_filter:
