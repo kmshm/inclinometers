@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Test funkcji filtrowania po godzinie
+Test funkcji filtrowania po inklinometrze
 """
 
 import csv
+import os
 
-def test_time_filter(input_file, output_file, filter_fragment, target_time=None):
-    """Test funkcji filtrowania kolumn z opcjonalnym filtrowaniem po godzinie"""
+def test_inclinometer_filter(input_file, output_file, filter_fragment, inclinometer=None, target_time=None):
+    """
+    Test funkcji filtrowania kolumn z opcjonalnym filtrowaniem po inklinometrze i godzinie
+
+    Args:
+        input_file: ścieżka do pliku wejściowego
+        output_file: ścieżka do pliku wyjściowego
+        filter_fragment: fragment nazwy kolumny (np. "_dA")
+        inclinometer: nazwa inklinometru (np. "Inkl_[1]") lub None
+        target_time: godzina do filtrowania (np. "18:00") lub None
+    """
 
     # Wczytanie pliku CSV
     with open(input_file, 'r', encoding='utf-8') as f:
@@ -30,11 +40,31 @@ def test_time_filter(input_file, output_file, filter_fragment, target_time=None)
     selected_columns = [all_columns[0]]
 
     for i, col in enumerate(all_columns[1:], start=1):
+        # Sprawdź fragment nazwy
         if filter_fragment in col:
-            selected_indices.append(i)
-            selected_columns.append(col)
+            # Jeśli filtrujemy po inklinometrze, sprawdź czy kolumna należy do tego inklinometru
+            if inclinometer:
+                if col.startswith(inclinometer):
+                    selected_indices.append(i)
+                    selected_columns.append(col)
+            else:
+                selected_indices.append(i)
+                selected_columns.append(col)
 
     print(f"\nZnaleziono {len(selected_columns) - 1} kolumn zawierających '{filter_fragment}'")
+    if inclinometer:
+        print(f"  (tylko z inklinometru {inclinometer})")
+
+    if len(selected_columns) == 1:
+        print(f"\n⚠ UWAGA: Nie znaleziono żadnych pasujących kolumn!")
+        return False
+
+    # Przykładowe kolumny
+    print("\nPrzykładowe wybrane kolumny:")
+    for i, col in enumerate(selected_columns[:10], 1):
+        print(f"  {i}. {col}")
+    if len(selected_columns) > 10:
+        print(f"  ... i {len(selected_columns) - 10} więcej")
 
     # Filtrowanie po godzinie (jeśli podano)
     if target_time:
@@ -77,47 +107,67 @@ def test_time_filter(input_file, output_file, filter_fragment, target_time=None)
 
 
 if __name__ == "__main__":
-    import os
-
     # Utwórz folder test_outputs jeśli nie istnieje
     os.makedirs("test_outputs", exist_ok=True)
 
     print("=" * 60)
-    print("TEST 1: Wszystkie dane (kolumny _dA)")
+    print("TEST 1: Wszystkie inklinometry, kolumny _dA")
     print("=" * 60)
-    test_time_filter(
+    test_inclinometer_filter(
         "testowe.csv",
-        "test_outputs/test_all_data.csv",
+        "test_outputs/test_all_inclinometers_dA.csv",
         "_dA",
-        target_time=None
+        inclinometer=None
     )
 
     print("\n" + "=" * 60)
-    print("TEST 2: Tylko godzina 00:00 (kolumny _dA)")
+    print("TEST 2: Tylko Inkl_[1], kolumny _dA")
     print("=" * 60)
-    test_time_filter(
+    test_inclinometer_filter(
         "testowe.csv",
-        "test_outputs/test_00_00.csv",
+        "test_outputs/test_Inkl1_dA.csv",
         "_dA",
+        inclinometer="Inkl_[1]"
+    )
+
+    print("\n" + "=" * 60)
+    print("TEST 3: Tylko Inkl_[2], kolumny _T")
+    print("=" * 60)
+    test_inclinometer_filter(
+        "testowe.csv",
+        "test_outputs/test_Inkl2_T.csv",
+        "_T",
+        inclinometer="Inkl_[2]"
+    )
+
+    print("\n" + "=" * 60)
+    print("TEST 4: Tylko Ink_[6], kolumny _dB")
+    print("=" * 60)
+    test_inclinometer_filter(
+        "testowe.csv",
+        "test_outputs/test_Ink6_dB.csv",
+        "_dB",
+        inclinometer="Ink_[6]"
+    )
+
+    print("\n" + "=" * 60)
+    print("TEST 5: Tylko Inkl_[1], kolumny _dA, godzina 00:00")
+    print("=" * 60)
+    test_inclinometer_filter(
+        "testowe.csv",
+        "test_outputs/test_Inkl1_dA_00_00.csv",
+        "_dA",
+        inclinometer="Inkl_[1]",
         target_time="00:00"
     )
 
     print("\n" + "=" * 60)
-    print("TEST 3: Tylko godzina 12:00 (kolumny _T)")
+    print("TEST 6: Tylko Inkl_[3], kolumny _X, godzina 12:00")
     print("=" * 60)
-    test_time_filter(
+    test_inclinometer_filter(
         "testowe.csv",
-        "test_outputs/test_12_00_T.csv",
-        "_T",
+        "test_outputs/test_Inkl3_X_12_00.csv",
+        "_X",
+        inclinometer="Inkl_[3]",
         target_time="12:00"
-    )
-
-    print("\n" + "=" * 60)
-    print("TEST 4: Tylko godzina 23:00 (kolumny _dB)")
-    print("=" * 60)
-    test_time_filter(
-        "testowe.csv",
-        "test_outputs/test_23_00_dB.csv",
-        "_dB",
-        target_time="23:00"
     )

@@ -15,7 +15,7 @@ class CSVColumnFilterApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Filtrowanie kolumn CSV")
-        self.root.geometry("700x600")
+        self.root.geometry("700x650")
 
         # Zmienne
         self.input_file = tk.StringVar()
@@ -25,6 +25,10 @@ class CSVColumnFilterApp:
         # Zmienne dla filtrowania po godzinie
         self.time_filter_mode = tk.StringVar(value="all")  # "all" lub "specific_time"
         self.specific_time = tk.StringVar(value="18:00")
+
+        # Zmienne dla filtrowania po inklinometrze
+        self.inclinometer_filter_enabled = tk.BooleanVar(value=False)
+        self.inclinometer_name = tk.StringVar(value="Inkl_[1]")
 
         # Tworzenie interfejsu
         self.create_widgets()
@@ -45,6 +49,29 @@ class CSVColumnFilterApp:
         tk.Label(filter_frame, text="Fragment nazwy kolumny:").pack(side=tk.LEFT)
         tk.Entry(filter_frame, textvariable=self.filter_text, width=20).pack(side=tk.LEFT, padx=5)
         tk.Label(filter_frame, text="(np. _dA, _T, _dB)").pack(side=tk.LEFT)
+
+        # Ramka dla filtrowania po inklinometrze
+        inclinometer_frame = tk.Frame(self.root, padx=10, pady=5)
+        inclinometer_frame.pack(fill=tk.X)
+
+        self.inclinometer_checkbox = tk.Checkbutton(
+            inclinometer_frame,
+            text="Tylko z konkretnego inklinometru:",
+            variable=self.inclinometer_filter_enabled,
+            command=self.toggle_inclinometer_input
+        )
+        self.inclinometer_checkbox.pack(side=tk.LEFT)
+
+        self.inclinometer_entry = tk.Entry(
+            inclinometer_frame,
+            textvariable=self.inclinometer_name,
+            width=15
+        )
+        self.inclinometer_entry.pack(side=tk.LEFT, padx=5)
+        tk.Label(inclinometer_frame, text="(np. Inkl_[1], Ink_[5])").pack(side=tk.LEFT)
+
+        # Początkowy stan - wyłącz pole inklinometru
+        self.inclinometer_entry.config(state='disabled')
 
         # Ramka dla filtrowania po godzinie
         time_filter_frame = tk.Frame(self.root, padx=10, pady=5)
@@ -134,6 +161,13 @@ class CSVColumnFilterApp:
         else:
             self.time_entry.config(state='disabled')
 
+    def toggle_inclinometer_input(self):
+        """Włącz/wyłącz pole wprowadzania inklinometru"""
+        if self.inclinometer_filter_enabled.get():
+            self.inclinometer_entry.config(state='normal')
+        else:
+            self.inclinometer_entry.config(state='disabled')
+
     def filter_columns(self):
         """Główna funkcja filtrująca kolumny"""
         # Walidacja
@@ -176,17 +210,32 @@ class CSVColumnFilterApp:
             # Filtrowanie kolumn - pierwsza kolumna + kolumny zawierające fragment
             filter_fragment = self.filter_text.get()
 
+            # Sprawdź czy filtrujemy po inklinometrze
+            inclinometer_filter = self.inclinometer_filter_enabled.get()
+            if inclinometer_filter:
+                inclinometer = self.inclinometer_name.get().strip()
+                self.log(f"Filtrowanie po inklinometrze: {inclinometer}")
+
             # Znajdź indeksy kolumn do zachowania
             selected_indices = [0]  # Pierwsza kolumna (daty)
             selected_columns = [all_columns[0]]
 
             # Dodaj kolumny zawierające fragment, zachowując kolejność
             for i, col in enumerate(all_columns[1:], start=1):
+                # Sprawdź fragment nazwy
                 if filter_fragment in col:
-                    selected_indices.append(i)
-                    selected_columns.append(col)
+                    # Jeśli filtrujemy po inklinometrze, sprawdź czy kolumna należy do tego inklinometru
+                    if inclinometer_filter:
+                        if col.startswith(inclinometer):
+                            selected_indices.append(i)
+                            selected_columns.append(col)
+                    else:
+                        selected_indices.append(i)
+                        selected_columns.append(col)
 
             self.log(f"\nZnaleziono {len(selected_columns) - 1} kolumn zawierających '{filter_fragment}'")
+            if inclinometer_filter:
+                self.log(f"  (tylko z inklinometru {inclinometer})")
             self.log(f"Łącznie kolumn w nowym pliku: {len(selected_columns)} (włącznie z kolumną dat)")
 
             if len(selected_columns) == 1:

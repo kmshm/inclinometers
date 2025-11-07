@@ -22,12 +22,12 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Pliki wyjściowe (opcjonalnie - zakomentuj jeśli chcesz commitować)
-# *_filtered.csv
-# testowe_filtered_*.csv
+# Folder z testowymi plikami wyjściowymi
+test_outputs/
 
-# Duże pliki CSV (opcjonalnie)
-# *.csv
+# Pliki wyjściowe
+*_filtered*.csv
+test_*.csv
 
 # Logs
 *.log

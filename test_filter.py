@@ -65,6 +65,11 @@ def test_filter_columns(input_file, output_file, filter_fragment):
 
 
 if __name__ == "__main__":
+    import os
+
+    # Utwórz folder test_outputs jeśli nie istnieje
+    os.makedirs("test_outputs", exist_ok=True)
+
     # Test z plikiem testowe.csv
     print("=" * 60)
     print("TEST: Filtrowanie kolumn zawierających '_dA'")
@@ -72,7 +77,7 @@ if __name__ == "__main__":
 
     test_filter_columns(
         "testowe.csv",
-        "testowe_filtered_dA.csv",
+        "test_outputs/testowe_filtered_dA.csv",
         "_dA"
     )
 
@@ -82,6 +87,6 @@ if __name__ == "__main__":
 
     test_filter_columns(
         "testowe.csv",
-        "testowe_filtered_T.csv",
+        "test_outputs/testowe_filtered_T.csv",
         "_T"
     )

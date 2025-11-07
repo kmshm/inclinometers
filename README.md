@@ -15,11 +15,14 @@ Ten skrypt został stworzony do pracy z dużymi plikami CSV zawierającymi dane 
 - **Automatyczne wykrywanie separatora** - Aktualnie ustawiony na średnik (`;`)
 - **Zachowanie struktury** - Pierwsza kolumna (daty) jest zawsze zachowywana
 - **Filtrowanie po fragmencie nazwy** - Możliwość wyboru kolumn zawierających określony fragment (np. `_dA`)
+- **Filtrowanie po inklinometrze** - Opcja wyboru konkretnego inklinometru (np. `Inkl_[1]`, `Ink_[6]`)
 - **Filtrowanie po godzinie** - Dwie opcje:
   - Wszystkie dane (pełne wiersze)
   - Tylko wiersze z konkretną godziną (np. 18:00 każdego dnia)
+- **Kombinacja filtrów** - Możliwość łączenia: fragment + inklinometr + godzina
 - **Podgląd logów** - Okno z informacjami o przetwarzaniu
 - **Automatyczna nazwa wyjściowa** - Sugerowana nazwa pliku wyjściowego na podstawie wejściowego
+- **Testowe pliki w osobnym folderze** - Wszystkie pliki wynikowe zapisywane do `test_outputs/`
 
 ## Struktura plików
 
@@ -99,19 +102,24 @@ python3 test_filter.py
    - W polu "Fragment nazwy kolumny" wpisz fragment, który mają zawierać kolumny
    - Przykłady: `_dA`, `_T`, `_dB`, `_X`, `_Y`
 
-4. **Wybierz opcję filtrowania wierszy:**
+4. **Opcjonalnie: wybierz konkretny inklinometr:**
+   - Zaznacz checkbox "Tylko z konkretnego inklinometru"
+   - Wpisz nazwę inklinometru, np. `Inkl_[1]`, `Inkl_[2]`, `Ink_[5]`, `Ink_[6]`
+   - Zostają tylko kolumny z tego inklinometru
+
+5. **Wybierz opcję filtrowania wierszy:**
    - **Wszystkie dane** - zachowuje wszystkie wiersze z pliku
    - **Tylko wiersze z konkretną godziną** - wybierz tę opcję i wpisz godzinę w formacie HH:MM (np. 18:00)
      - Zostają tylko wiersze z podaną godziną z każdego dnia
      - Przydatne do wyciągnięcia dziennych pomiarów o tej samej porze
 
-5. **Wybierz miejsce zapisu (opcjonalnie):**
+6. **Wybierz miejsce zapisu (opcjonalnie):**
    - Domyślnie nazwa jest generowana automatycznie (`plik_filtered.csv`)
    - Możesz ją zmienić klikając "Wybierz..." obok "Plik wyjściowy"
 
-6. **Kliknij "Filtruj kolumny"**
+7. **Kliknij "Filtruj kolumny"**
 
-7. **Sprawdź logi:**
+8. **Sprawdź logi:**
    - W dolnej części okna zobaczysz szczegółowe informacje o procesie
    - Po zakończeniu pojawi się okno z potwierdzeniem
 
@@ -187,6 +195,44 @@ Date UTC;Ink_[5][0]_dA;Ink_[5][1]_dA;Ink_[5][2]_dA;...
 
 - Przydatne do analizy dziennych wartości o tej samej porze
 - Eliminuje fluktuacje godzinowe
+
+### Przykład 5: Tylko inklinometr Inkl_[1], kolumny _dA
+
+**Plik wejściowy:** `testowe.csv` (459 kolumn)
+
+**Fragment:** `_dA`
+
+**Inklinometr:** `Inkl_[1]`
+
+**Wynik:** `test_Inkl1_dA.csv` (16 kolumn: 1 kolumna dat + 15 kolumn _dA z Inkl_[1])
+
+- Wszystkie inklinometry: 104 kolumny _dA
+- Tylko Inkl_[1]: 15 kolumn _dA
+
+```
+Date UTC;Inkl_[1][0]_dA;Inkl_[1][1]_dA;Inkl_[1][2]_dA;...
+25.09.2025 23:00;1.96;10.05;8.13;19.51;...
+25.09.2025 23:15;1.96;10.04;8.13;19.5;...
+```
+
+### Przykład 6: Inkl_[1] + _dA + godzina 00:00 (kombinacja wszystkich filtrów)
+
+**Plik wejściowy:** `testowe.csv` (1342 wiersze, 459 kolumn)
+
+**Fragment:** `_dA`
+
+**Inklinometr:** `Inkl_[1]`
+
+**Godzina:** `00:00`
+
+**Wynik:** `test_Inkl1_dA_00_00.csv` (11 wierszy, 16 kolumn)
+
+- Tylko inklinometr Inkl_[1]
+- Tylko kolumny z _dA
+- Tylko pomiary o północy każdego dnia
+- Z 1342 wierszy → 11 wierszy
+
+Idealny do analizy dziennych wartości jednego inklinometru o stałej porze!
 
 ## Struktura danych
 
@@ -337,6 +383,22 @@ A: Obecnie nie - możesz wybrać tylko jedną konkretną godzinę lub wszystkie 
 **Q: W jakim formacie podać godzinę?**
 
 A: Format HH:MM, np. "18:00", "09:30", "23:45". Użyj dwóch cyfr dla godziny i minut
+
+**Q: Jak nazywają się inklinometry w moim pliku?**
+
+A: Otwórz plik CSV w edytorze i sprawdź nagłówki kolumn. Szukaj wzorców jak `Inkl_[1]`, `Inkl_[2]`, `Ink_[5]`, `Ink_[6]` itp. Nazwa inklinometru to część przed numerem czujnika w nawiasach kwadratowych
+
+**Q: Czy mogę filtrować po wielu inklinometrach na raz?**
+
+A: Obecnie nie - możesz wybrać tylko jeden inklinometr lub wszystkie. Jeśli potrzebujesz danych z kilku inklinometrów, uruchom skrypt kilka razy
+
+**Q: Co się stanie jeśli podam błędną nazwę inklinometru?**
+
+A: Skrypt nie znajdzie żadnych pasujących kolumn i wyświetli ostrzeżenie. Sprawdź pisownię - nazwa musi dokładnie odpowiadać początkowcom kolumn (np. `Inkl_[1]`, a nie `Inkl[1]`)
+
+**Q: Gdzie zapisują się testowe pliki?**
+
+A: Wszystkie pliki wynikowe z testów zapisują się do folderu `test_outputs/`, który jest ignorowany przez git
 
 ## Licencja
 
