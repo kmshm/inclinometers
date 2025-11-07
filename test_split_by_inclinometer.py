@@ -22,6 +22,37 @@ def detect_inclinometers(columns):
     return sorted(list(inclinometers))
 
 
+def calculate_max_value(row, column_names):
+    """
+    Oblicz maksymalną wartość z wiersza i znajdź jej źródło
+
+    Args:
+        row: wiersz danych (lista wartości, pierwsza to data)
+        column_names: nazwy kolumn (lista, pierwsza to Date UTC)
+
+    Returns:
+        (max_value, max_column_name) lub (None, None) jeśli brak wartości numerycznych
+    """
+    max_val = None
+    max_col = None
+
+    # Pomiń pierwszą kolumnę (daty) - start od indeksu 1
+    for i in range(1, len(row)):
+        value_str = row[i].strip() if i < len(row) else ''
+
+        if value_str and value_str != '':
+            try:
+                value = float(value_str)
+                if max_val is None or value > max_val:
+                    max_val = value
+                    max_col = column_names[i] if i < len(column_names) else f"Column_{i}"
+            except ValueError:
+                # Wartość nie jest liczbą, pomiń
+                continue
+
+    return (max_val, max_col)
+
+
 def split_by_inclinometer(input_file, base_filename, filter_fragment, target_time=None):
     """
     Generuj osobne pliki dla każdego inklinometru
@@ -107,6 +138,23 @@ def split_by_inclinometer(input_file, base_filename, filter_fragment, target_tim
                 filtered_rows.append(filtered_row)
             print(f"  Wierszy: {len(filtered_rows)}")
 
+        # Dodaj kolumny MAX i MAX_COLUMN
+        extended_columns = selected_columns + ['MAX', 'MAX_COLUMN']
+
+        # Oblicz MAX i MAX_COLUMN dla każdego wiersza
+        extended_rows = []
+        for filtered_row in filtered_rows:
+            max_val, max_col = calculate_max_value(filtered_row, selected_columns)
+
+            # Dodaj wartości MAX i MAX_COLUMN na końcu wiersza
+            extended_row = filtered_row + [
+                str(max_val) if max_val is not None else '',
+                max_col if max_col is not None else ''
+            ]
+            extended_rows.append(extended_row)
+
+        print(f"  Dodano kolumny MAX i MAX_COLUMN")
+
         # Utwórz nazwę pliku
         safe_incl_name = inclinometer.replace('[', '_').replace(']', '_').replace('__', '_').rstrip('_')
         output_filename = f"{base_filename}_{safe_incl_name}.csv"
@@ -115,8 +163,8 @@ def split_by_inclinometer(input_file, base_filename, filter_fragment, target_tim
         # Zapisz plik
         with open(output_path, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f, delimiter=';')
-            writer.writerow(selected_columns)
-            writer.writerows(filtered_rows)
+            writer.writerow(extended_columns)
+            writer.writerows(extended_rows)
 
         files_created.append(output_filename)
         print(f"  ✓ Zapisano: {output_filename}")

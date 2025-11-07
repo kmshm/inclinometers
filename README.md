@@ -23,6 +23,9 @@ Ten skrypt został stworzony do pracy z dużymi plikami CSV zawierającymi dane 
   - Tylko wiersze z konkretną godziną (np. 18:00 każdego dnia)
 - **Kombinacja filtrów** - Możliwość łączenia: fragment + inklinometr + godzina
 - **Automatyczne wykrywanie inklinometrów** - Skrypt sam znajdzie wszystkie inklinometry w pliku
+- **Kolumny MAX i MAX_COLUMN** - W trybie generowania osobnych plików, automatycznie dodawane są dwie kolumny:
+  - `MAX` - maksymalna wartość z danego wiersza
+  - `MAX_COLUMN` - nazwa kolumny, z której pochodzi wartość maksymalna
 - **Podgląd logów** - Okno z informacjami o przetwarzaniu
 - **Automatyczna nazwa wyjściowa** - Sugerowana nazwa pliku wyjściowego na podstawie wejściowego
 - **Testowe pliki w osobnym folderze** - Wszystkie pliki wynikowe zapisywane do `test_outputs/`
@@ -277,11 +280,15 @@ pomiary_dA_Inkl_4.csv    (11 wierszy, 16 kolumn)
 
 **Przykładowa zawartość `pomiary_dA_Inkl_1.csv`:**
 ```
-Date UTC;Inkl_[1][0]_dA;Inkl_[1][1]_dA;Inkl_[1][2]_dA;...
-26.09.2025 12:00;1.97;10.08;8.15;19.53;...
-27.09.2025 12:00;1.96;10.07;8.14;19.52;...
+Date UTC;Inkl_[1][0]_dA;Inkl_[1][1]_dA;Inkl_[1][2]_dA;...;MAX;MAX_COLUMN
+26.09.2025 12:00;1.97;10.08;8.15;19.53;...;19.53;Inkl_[1][3]_dA
+27.09.2025 12:00;1.96;10.07;8.14;19.52;...;19.52;Inkl_[1][3]_dA
 ...
 ```
+
+**Uwaga:** W trybie generowania osobnych plików, na końcu każdego pliku automatycznie dodawane są dwie kolumny:
+- **MAX** - maksymalna wartość numeryczna z danego wiersza
+- **MAX_COLUMN** - nazwa kolumny, w której znajduje się ta wartość maksymalna
 
 **Zastosowania:**
 - Automatyczne rozdzielenie danych na osobne pliki dla każdego urządzenia
@@ -475,6 +482,22 @@ A: Nie - to wzajemnie wykluczające się opcje. Gdy zaznaczysz "Generuj osobne p
 **Q: Jak nazywają się pliki wyjściowe w trybie "generuj osobne pliki"?**
 
 A: Nazwa bazowa + `_` + nazwa inklinometru (z zamienionymi nawiasami na podkreślniki) + `.csv`. Przykład: `dane_12_00_Inkl_1.csv` dla inklinometru `Inkl_[1]`
+
+**Q: Co to są kolumny MAX i MAX_COLUMN?**
+
+A: W trybie generowania osobnych plików dla każdego inklinometru, na końcu pliku automatycznie dodawane są dwie kolumny:
+- **MAX** - największa wartość numeryczna znaleziona w danym wierszu (pomijając kolumnę z datą)
+- **MAX_COLUMN** - nazwa kolumny, z której pochodzi ta maksymalna wartość
+
+Przykład: jeśli w wierszu wartości to `[1.97, 10.08, 8.15, 19.53]`, to MAX=19.53 a MAX_COLUMN wskaże trzecią kolumnę. To ułatwia szybką identyfikację najwyższych odczytów i ich źródeł.
+
+**Q: Czy kolumny MAX i MAX_COLUMN pojawiają się zawsze?**
+
+A: Nie - tylko w trybie "Generuj osobne pliki dla każdego inklinometru". W trybie pojedynczego pliku (bez split) te kolumny nie są dodawane.
+
+**Q: Co się dzieje gdy w wierszu są tylko puste wartości lub tekst?**
+
+A: Jeśli w wierszu nie ma żadnych wartości numerycznych, kolumny MAX i MAX_COLUMN będą puste. Skrypt pomija wartości nie-numeryczne i błędne podczas szukania maksimum.
 
 ## Licencja
 
