@@ -15,6 +15,9 @@ Ten skrypt został stworzony do pracy z dużymi plikami CSV zawierającymi dane 
 - **Automatyczne wykrywanie separatora** - Aktualnie ustawiony na średnik (`;`)
 - **Zachowanie struktury** - Pierwsza kolumna (daty) jest zawsze zachowywana
 - **Filtrowanie po fragmencie nazwy** - Możliwość wyboru kolumn zawierających określony fragment (np. `_dA`)
+- **Filtrowanie po godzinie** - Dwie opcje:
+  - Wszystkie dane (pełne wiersze)
+  - Tylko wiersze z konkretną godziną (np. 18:00 każdego dnia)
 - **Podgląd logów** - Okno z informacjami o przetwarzaniu
 - **Automatyczna nazwa wyjściowa** - Sugerowana nazwa pliku wyjściowego na podstawie wejściowego
 
@@ -96,13 +99,19 @@ python3 test_filter.py
    - W polu "Fragment nazwy kolumny" wpisz fragment, który mają zawierać kolumny
    - Przykłady: `_dA`, `_T`, `_dB`, `_X`, `_Y`
 
-4. **Wybierz miejsce zapisu (opcjonalnie):**
+4. **Wybierz opcję filtrowania wierszy:**
+   - **Wszystkie dane** - zachowuje wszystkie wiersze z pliku
+   - **Tylko wiersze z konkretną godziną** - wybierz tę opcję i wpisz godzinę w formacie HH:MM (np. 18:00)
+     - Zostają tylko wiersze z podaną godziną z każdego dnia
+     - Przydatne do wyciągnięcia dziennych pomiarów o tej samej porze
+
+5. **Wybierz miejsce zapisu (opcjonalnie):**
    - Domyślnie nazwa jest generowana automatycznie (`plik_filtered.csv`)
    - Możesz ją zmienić klikając "Wybierz..." obok "Plik wyjściowy"
 
-5. **Kliknij "Filtruj kolumny"**
+6. **Kliknij "Filtruj kolumny"**
 
-6. **Sprawdź logi:**
+7. **Sprawdź logi:**
    - W dolnej części okna zobaczysz szczegółowe informacje o procesie
    - Po zakończeniu pojawi się okno z potwierdzeniem
 
@@ -145,6 +154,39 @@ Date UTC;Ink_[5][1]_T;Ink_[5][2]_T;Ink_[5][3]_T;...
 25.09.2025 23:00;;;;;...
 25.09.2025 23:15;;;;;...
 ```
+
+### Przykład 3: Filtrowanie kolumn `_dA` + tylko godzina 00:00
+
+**Plik wejściowy:** `testowe.csv` (1342 wiersze, 459 kolumn)
+
+**Fragment:** `_dA`
+
+**Godzina:** `00:00`
+
+**Wynik:** `testowe_00_00_dA.csv` (11 wierszy, 105 kolumn)
+
+- Tylko wiersze z godziną 00:00 każdego dnia
+- Z 1342 wierszy zostaje 11 (po jednym na dzień o północy)
+
+```
+Date UTC;Ink_[5][0]_dA;Ink_[5][1]_dA;Ink_[5][2]_dA;...
+26.09.2025 00:00;;48.53;50.63;...
+27.09.2025 00:00;31.78;48.62;50.73;...
+28.09.2025 00:00;31.8;48.72;50.84;...
+```
+
+### Przykład 4: Filtrowanie kolumn `_T` + tylko godzina 18:00
+
+**Plik wejściowy:** `testowe.csv` (1342 wiersze, 459 kolumn)
+
+**Fragment:** `_T`
+
+**Godzina:** `18:00`
+
+**Wynik:** Tylko pomiary temperatury o 18:00 każdego dnia
+
+- Przydatne do analizy dziennych wartości o tej samej porze
+- Eliminuje fluktuacje godzinowe
 
 ## Struktura danych
 
@@ -282,7 +324,19 @@ A: Tak, skrypt wczytuje plik do pamięci, więc powinien działać z dużymi pli
 
 **Q: Czy mogę uruchomić skrypt bez GUI?**
 
-A: Tak, użyj `test_filter.py` lub zmodyfikuj funkcję `filter_columns` do użycia z linii poleceń
+A: Tak, użyj `test_filter.py` lub `test_time_filter.py` dla testów z linii poleceń
+
+**Q: Jak działa filtrowanie po godzinie?**
+
+A: Jeśli wybierzesz opcję "Tylko wiersze z konkretną godziną" i podasz np. "18:00", skrypt zachowa tylko te wiersze, gdzie w kolumnie z datą występuje godzina 18:00 (niezależnie od dnia)
+
+**Q: Czy mogę wybrać wiele różnych godzin?**
+
+A: Obecnie nie - możesz wybrać tylko jedną konkretną godzinę lub wszystkie dane. Jeśli potrzebujesz wielu godzin, uruchom skrypt kilka razy z różnymi godzinami
+
+**Q: W jakim formacie podać godzinę?**
+
+A: Format HH:MM, np. "18:00", "09:30", "23:45". Użyj dwóch cyfr dla godziny i minut
 
 ## Licencja
 

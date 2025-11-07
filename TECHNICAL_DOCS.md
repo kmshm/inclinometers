@@ -31,6 +31,8 @@ csv_column_filter.py
 - `self.input_file` (StringVar) - Ścieżka do pliku wejściowego
 - `self.output_file` (StringVar) - Ścieżka do pliku wyjściowego
 - `self.filter_text` (StringVar) - Fragment nazwy kolumny (domyślnie "_dA")
+- `self.time_filter_mode` (StringVar) - Tryb filtrowania: "all" lub "specific_time"
+- `self.specific_time` (StringVar) - Konkretna godzina do filtrowania (domyślnie "18:00")
 
 **Wywołania:**
 - `self.create_widgets()` - Tworzy wszystkie elementy GUI
@@ -50,6 +52,11 @@ csv_column_filter.py
 ├─────────────────────────────────────────────┤
 │ [Label] Fragment nazwy:                     │
 │ [Entry: filter_text]  [Label: (np. _dA)]   │
+├─────────────────────────────────────────────┤
+│ [Label] Filtrowanie wierszy:                │
+│   ○ Wszystkie dane (pełne wiersze)          │
+│   ○ Tylko wiersze z konkretną godziną:      │
+│     [Entry: specific_time] (format HH:MM)   │
 ├─────────────────────────────────────────────┤
 │ [Label] Plik wyjściowy:                     │
 │ [Entry: output_file]       [Button: Wybierz]│
@@ -116,6 +123,18 @@ self.log(f"Znaleziono {count} kolumn")
 
 ---
 
+### `toggle_time_input(self)`
+
+**Opis:** Włącza/wyłącza pole wprowadzania godziny w zależności od wyboru radio button
+
+**Działanie:**
+- Jeśli `time_filter_mode == "specific_time"` → włącz pole (state='normal')
+- Jeśli `time_filter_mode == "all"` → wyłącz pole (state='disabled')
+
+**Wywołanie:** Automatyczne przy zmianie radio button (command callback)
+
+---
+
 ### `filter_columns(self)` - GŁÓWNA FUNKCJA
 
 **Opis:** Główna logika filtrowania kolumn CSV
@@ -153,28 +172,41 @@ self.log(f"Znaleziono {count} kolumn")
    ├─ Lista przykładowych kolumn (pierwsze 6)
    └─ Ostrzeżenie jeśli brak wyników
 
-6. FILTROWANIE DANYCH
+6. SPRAWDZENIE TRYBU FILTROWANIA PO GODZINIE
+   ├─ Jeśli time_filter_mode == "specific_time":
+   │  └─ Pobierz target_time (np. "18:00")
+   └─ Loguj informację o trybie filtrowania
+
+7. FILTROWANIE DANYCH (KOLUMNY + WIERSZE)
    ├─ Utwórz filtered_data = []
    ├─ Dodaj nagłówki wybranych kolumn
    ├─ Dla każdego wiersza danych:
-   │  └─ Ekstraktuj wartości z selected_indices
-   └─ Dodaj do filtered_data
+   │  ├─ JEŚLI time_filter_mode == "specific_time":
+   │  │  ├─ Pobierz date_str z row[0]
+   │  │  ├─ Wyodrębnij część czasową (split po spacji)
+   │  │  ├─ Jeśli time_part != target_time → POMIŃ wiersz
+   │  │  └─ Jeśli time_part == target_time → KONTYNUUJ
+   │  ├─ Ekstraktuj wartości z selected_indices
+   │  └─ Dodaj do filtered_data
+   └─ Sprawdź czy znaleziono jakiekolwiek wiersze
 
-7. ZAPIS DO PLIKU
+8. ZAPIS DO PLIKU
    ├─ Otwórz plik wyjściowy z encoding='utf-8'
    ├─ Użyj csv.writer z delimiter=';'
    ├─ Zapisz wszystkie wiersze (writerows)
    └─ Zamknij plik
 
-8. POTWIERDZENIE
+9. POTWIERDZENIE
    ├─ Loguj sukces
    ├─ Wyświetl messagebox z potwierdzeniem
-   └─ Wyświetl statystyki (liczba wierszy, kolumn)
+   ├─ Wyświetl statystyki (liczba wierszy przed/po filtrze, kolumn)
+   └─ Jeśli time_filter_mode == "specific_time":
+      └─ Dodaj informację o liczbie pominiętych wierszy
 
-9. OBSŁUGA BŁĘDÓW
-   ├─ Catch Exception
-   ├─ Loguj błąd
-   └─ Wyświetl messagebox z błędem
+10. OBSŁUGA BŁĘDÓW
+    ├─ Catch Exception
+    ├─ Loguj błąd
+    └─ Wyświetl messagebox z błędem
 ```
 
 #### Przykład działania:
@@ -219,6 +251,57 @@ Indeksy: [0, 1, 3]
 
 filtered_row = [row[i] if i < len(row) else '' for i in selected_indices]
 # Wynik: ['25.09.2025', 'val1', 'val3']
+```
+
+#### Przykład z filtrowaniem po godzinie:
+
+**Input:**
+```
+Nagłówki: ['Date UTC', 'Col1_dA', 'Col2_dA']
+Fragment: '_dA'
+Godzina: '18:00'
+
+Data rows:
+['26.09.2025 00:00', '10', '20']
+['26.09.2025 12:00', '11', '21']
+['26.09.2025 18:00', '12', '22']  ← PASUJE
+['27.09.2025 00:00', '13', '23']
+['27.09.2025 18:00', '14', '24']  ← PASUJE
+```
+
+**Proces filtrowania wierszy:**
+```
+Wiersz 1: '26.09.2025 00:00'
+  → time_part = '00:00'
+  → '00:00' != '18:00' → POMIŃ
+
+Wiersz 2: '26.09.2025 12:00'
+  → time_part = '12:00'
+  → '12:00' != '18:00' → POMIŃ
+
+Wiersz 3: '26.09.2025 18:00'
+  → time_part = '18:00'
+  → '18:00' == '18:00' → ZACHOWAJ
+
+Wiersz 4: '27.09.2025 00:00'
+  → time_part = '00:00'
+  → '00:00' != '18:00' → POMIŃ
+
+Wiersz 5: '27.09.2025 18:00'
+  → time_part = '18:00'
+  → '18:00' == '18:00' → ZACHOWAJ
+```
+
+**Output:**
+```
+filtered_data = [
+    ['Date UTC', 'Col1_dA', 'Col2_dA'],      # Nagłówki
+    ['26.09.2025 18:00', '12', '22'],        # Wiersz 3
+    ['27.09.2025 18:00', '14', '24']         # Wiersz 5
+]
+
+Wierszy przed filtrowaniem: 5
+Wierszy po filtrowaniu: 2
 ```
 
 ## Przepływ danych
